@@ -1,0 +1,28 @@
+{
+  "id": "websocket",
+  "name": "WebSocket",
+  "blocks": [
+    {
+      "opcode": "connect",
+      "blockType": "command",
+      "text": "connect to [URL]",
+      "arguments": {
+        "URL": {
+          "type": "string",
+          "defaultValue": "ws://localhost:8080"
+        }
+      }
+    },
+    {
+      "opcode": "send",
+      "blockType": "command",
+      "text": "send [MSG]",
+      "arguments": {
+        "MSG": {
+          "type": "string",
+          "defaultValue": "hello"
+        }
+      }
+    }
+  ]
+}
