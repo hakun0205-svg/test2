@@ -1,65 +1,123 @@
 class WebSocketExtension {
-  constructor() {
+  constructor(runtime) {
+    this.runtime = runtime;
     this.ws = null;
-    this.lastMessage = "";
+    this.lastMessage = '';
+    this.isConnected = false;
   }
 
   getInfo() {
     return {
-      id: "websocket",
-      name: "WebSocket",
+      id: 'websocket',
+      name: 'WebSocket',
       blocks: [
         {
-          opcode: "connect",
-          blockType: "command",
-          text: "connect to [URL]",
+          opcode: 'connect',
+          blockType: Scratch.BlockType.COMMAND,
+          text: 'connect to [URL]',
           arguments: {
-            URL: {
-              type: "string",
-              defaultValue: "ws://localhost:8080"
-            }
+            URL: { type: Scratch.ArgumentType.STRING, defaultValue: 'ws://localhost:8080' }
           }
         },
         {
-          opcode: "send",
-          blockType: "command",
-          text: "send [MSG]",
+          opcode: 'disconnect',
+          blockType: Scratch.BlockType.COMMAND,
+          text: 'disconnect'
+        },
+        {
+          opcode: 'send',
+          blockType: Scratch.BlockType.COMMAND,
+          text: 'send [MESSAGE]',
           arguments: {
-            MSG: {
-              type: "string",
-              defaultValue: "hello"
-            }
+            MESSAGE: { type: Scratch.ArgumentType.STRING }
           }
         },
         {
-          opcode: "lastMessage",
-          blockType: "reporter",
-          text: "last received message"
+          opcode: 'sendJSON',
+          blockType: Scratch.BlockType.COMMAND,
+          text: 'send JSON [OBJ]',
+          arguments: {
+            OBJ: { type: Scratch.ArgumentType.STRING, defaultValue: '{"hello":"world"}' }
+          }
+        },
+        {
+          opcode: 'onMessage',
+          blockType: Scratch.BlockType.REPORTER,
+          text: 'last message'
+        },
+        {
+          opcode: 'onJSON',
+          blockType: Scratch.BlockType.REPORTER,
+          text: 'last JSON'
+        },
+        {
+          opcode: 'status',
+          blockType: Scratch.BlockType.REPORTER,
+          text: 'connection status'
         }
       ]
     };
   }
 
-  connect({ URL }) {
-    this.ws = new WebSocket(URL);
-    this.ws.onopen = () => console.log("Connected:", URL);
-    this.ws.onmessage = (msg) => {
-      this.lastMessage = msg.data;
-      console.log("Received:", msg.data);
+  connect(args) {
+    this.ws = new WebSocket(args.URL);
+    this.lastMessage = '';
+    this.lastJSON = '';
+    this.isConnected = false;
+
+    this.ws.onopen = () => {
+      this.isConnected = true;
     };
-    this.ws.onerror = (err) => console.error("WebSocket error:", err);
+
+    this.ws.onclose = () => {
+      this.isConnected = false;
+    };
+
+    this.ws.onmessage = (event) => {
+      this.lastMessage = event.data;
+
+      try {
+        this.lastJSON = JSON.stringify(JSON.parse(event.data));
+      } catch {
+        this.lastJSON = '';
+      }
+    };
   }
 
-  send({ MSG }) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(MSG);
-    } else {
-      console.warn("WebSocket is not connected.");
+  disconnect() {
+    if (this.ws) {
+      this.ws.close();
+      this.isConnected = false;
     }
   }
 
-  lastMessage() {
-    return this.lastMessage;
+  send(args) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(args.MESSAGE);
+    }
+  }
+
+  sendJSON(args) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      try {
+        const obj = JSON.parse(args.OBJ);
+        this.ws.send(JSON.stringify(obj));
+      } catch {
+        console.warn('Invalid JSON');
+      }
+    }
+  }
+
+  onMessage() {
+    return this.lastMessage || '';
+  }
+
+  onJSON() {
+    return this.lastJSON || '';
+  }
+
+  status() {
+    return this.isConnected ? 'connected' : 'disconnected';
   }
 }
 
